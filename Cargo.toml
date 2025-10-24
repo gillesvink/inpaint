@@ -1,0 +1,31 @@
+[package]
+name = "inpaint"
+version = "0.1.0"
+edition = "2024"
+license = "EUPL-1.2"
+authors = ["Gilles Vink <gillesvink@noreply.codeberg.org>"]
+description = "Easy to use library for inpainting images."
+repository = "https://codeberg.org/gillesvink/inpaint"
+documentation = "https://docs.rs/inpaint"
+keywords = ["inpainting", "image-processing"]
+categories = ["multimedia", "graphics"]
+
+[features]
+default = ["image"]
+image = ["dep:image"]
+
+[dependencies]
+thiserror = { version = ">=2.0.0, < 2.1" }
+glam = { version = ">=0.30.0" }
+ndarray = { version = ">=0.13.0" }
+image = { version = ">=0.25.0", optional = true, default-features = false }
+num-traits = "0.2.19"
+nalgebra = "0.34.1"
+simba = "0.9.1"
+
+[dev-dependencies]
+assert_approx_eq = "1.1.0"
+image = ">=0.25.0"
+image-compare = "0.4.1"
+paste = "1.0.15"
+rstest = "0.26.0"
