@@ -1,5 +1,10 @@
 use thiserror::Error;
 
+#[cfg(feature = "python-bindings")]
+use pyo3::PyErr;
+#[cfg(feature = "python-bindings")]
+use pyo3::exceptions::PyRuntimeError;
+
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Casting from types failed")]
@@ -14,6 +19,13 @@ pub enum Error {
     NDArray(#[from] ndarray::ShapeError),
     #[error("{0}")]
     Custom(String),
+}
+
+#[cfg(feature = "python-bindings")]
+impl std::convert::From<Error> for PyErr {
+    fn from(err: Error) -> PyErr {
+        PyRuntimeError::new_err(err.to_string())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

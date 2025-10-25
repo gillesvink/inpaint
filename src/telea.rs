@@ -12,13 +12,13 @@
 use crate::error::{Error, Result};
 use core::f32;
 use glam::{IVec2, USizeVec2, Vec2, Vec4};
-use ndarray::Array2;
+use ndarray::{Array1, Array2, Array3, arr1, s};
 use num_traits::AsPrimitive;
 use std::cmp::Reverse;
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 /// Just a simple alias to the Array2 type
-type Image<P, const C: usize> = Array2<[P; C]>;
+type Image<P> = Array3<P>;
 /// Array containing pixel state flags
 type FlagArray = Array2<Flag>;
 /// Array containing distance to mask
@@ -356,19 +356,20 @@ fn get_eikonal(
     Some(Vec4::from_slice(&eikonals).min_element())
 }
 
-fn inpaint_pixel<const C: usize>(
-    image: &Image<f32, C>,
+fn inpaint_pixel(
+    image: &Image<f32>,
     coordinate: USizeVec2,
     resolution: USizeVec2,
     distances: &mut DistanceArray,
     flags: &mut FlagArray,
     radius: i32,
-) -> [f32; C] {
+) -> Array1<f32> {
     let distance = distances[[coordinate.y, coordinate.x]];
     let gradient_distance = pixel_gradient(coordinate, resolution, distances, flags);
 
     let mut weight_sum = 0.0;
-    let mut output_pixel = [0.0; C];
+    let channels = image.dim().2;
+    let mut output_pixel = arr1(&vec![0.0; channels]);
     for y in -radius..=radius {
         for x in -radius..=radius {
             let current_coordinate = coordinate.as_ivec2() + IVec2::new(x, y);
@@ -401,9 +402,13 @@ fn inpaint_pixel<const C: usize>(
             let level_factor = 1.0 / (1.0 + (neighbor_distance - distance).abs());
             let distance_factor = 1.0 / (length * length_pow);
             let weight = (direction_factor * distance_factor * level_factor).abs();
-            let sample = image[[current_coordinate.y as usize, current_coordinate.x as usize]];
             for (channel, value) in output_pixel.iter_mut().enumerate() {
-                *value += weight * sample[channel];
+                *value += weight
+                    * image[[
+                        current_coordinate.y as usize,
+                        current_coordinate.x as usize,
+                        channel,
+                    ]];
             }
             weight_sum += weight;
         }
@@ -415,27 +420,27 @@ fn inpaint_pixel<const C: usize>(
 }
 
 /// Data structure that stores the processing data.
-struct ProcessData<const C: usize> {
+struct ProcessData {
     distances: DistanceArray,
-    process_image: Image<f32, C>,
+    process_image: Image<f32>,
     flags: FlagArray,
     heap: BinaryHeap<Reverse<QueueItem>>,
 }
 
-impl<const C: usize> ProcessData<C> {
+impl ProcessData {
     /// Initialize the process data and precompute the distances, flags and fill heap
-    pub fn new<P, T>(
+    pub fn new<ImageType, MaskType>(
         resolution: USizeVec2,
-        image: &Image<P, C>,
-        mask: &Array2<T>,
+        image: &Image<ImageType>,
+        mask: &Array2<MaskType>,
         radius: i32,
     ) -> Result<Self>
     where
-        P: AsPrimitive<f32> + Copy,
-        T: AsPrimitive<f32> + Copy + 'static,
+        ImageType: AsPrimitive<f32> + Copy,
+        MaskType: AsPrimitive<f32> + Copy + 'static,
     {
         let mut distances = Array2::<f32>::from_elem((resolution.y, resolution.x), MAX);
-        let process_image: Image<f32, C> = image.mapv(|pixel| pixel.map(|channel| channel.as_()));
+        let process_image: Image<f32> = image.mapv(|pixel| pixel.as_());
         let mask_array = convert_mask_to_flag_array(mask, resolution);
         let mut flags = mask_array
             .clone()
@@ -487,21 +492,21 @@ impl<const C: usize> ProcessData<C> {
 }
 
 /// Inpaint the input image according to the mask provided.
-pub fn telea_inpaint<PixelType, const CHANNELS: usize, MaskPixelType>(
-    image: &mut Image<PixelType, CHANNELS>,
-    mask: Array2<MaskPixelType>,
+pub fn telea_inpaint<ImageType, MaskType>(
+    image: &mut Image<ImageType>,
+    mask: Array2<MaskType>,
     radius: i32,
 ) -> Result<()>
 where
-    PixelType: AsPrimitive<f32> + Copy,
-    f32: num_traits::AsPrimitive<PixelType>,
-    MaskPixelType: AsPrimitive<f32> + Copy + 'static,
+    ImageType: AsPrimitive<f32> + Copy,
+    f32: num_traits::AsPrimitive<ImageType>,
+    MaskType: AsPrimitive<f32> + Copy + 'static,
 {
-    if image.ncols() != mask.ncols() || image.nrows() != mask.nrows() {
+    if image.shape()[0] != mask.ncols() || image.shape()[1] != mask.nrows() {
         return Err(Error::DimensionMismatch);
     }
 
-    let resolution = USizeVec2::new(image.ncols(), image.nrows());
+    let resolution = USizeVec2::new(image.shape()[1], image.shape()[0]);
     let mut process_data = ProcessData::new(resolution, image, &mask, radius)?;
     while !process_data.heap.is_empty() {
         let coordinates = if let Some(node) = process_data.heap.pop() {
@@ -533,8 +538,10 @@ where
                 &mut process_data.flags,
                 radius,
             );
-
-            process_data.process_image[[neighbor.y as usize, neighbor.x as usize]] = pixel;
+            process_data
+                .process_image
+                .slice_mut(s![neighbor.y, neighbor.x, 0..])
+                .assign(&pixel);
 
             process_data.flags[[neighbor.y as usize, neighbor.x as usize]] = Flag::Band;
             process_data
@@ -542,9 +549,11 @@ where
                 .push(Reverse(QueueItem::new(distance, neighbor.as_usizevec2())));
         }
     }
-    image.indexed_iter_mut().for_each(|((y, x), value)| {
-        *value = process_data.process_image[[y, x]].map(|v| v.as_());
-    });
+    image
+        .indexed_iter_mut()
+        .for_each(|((y, x, channel), value)| {
+            *value = process_data.process_image[[y, x, channel]].as_();
+        });
 
     Ok(())
 }
@@ -553,6 +562,7 @@ where
 mod tests {
     use super::*;
     use image::{DynamicImage, Pixel, Rgba32FImage};
+    use ndarray::s;
     use rstest::rstest;
     use std::path::PathBuf;
     use std::time::Instant;
@@ -610,9 +620,9 @@ mod tests {
         let (width, height) = image.dimensions();
         let resolution = USizeVec2::new(width as usize, height as usize);
         let mask = image::open(mask).unwrap().to_luma8();
-        let mut input_image: Array2<[f32; 4]> =
-            Array2::from_shape_fn((resolution.y, resolution.x), |(y, x)| {
-                image.get_pixel(x as u32, y as u32).0
+        let mut input_image: Image<f32> =
+            Image::from_shape_fn((resolution.x, resolution.y, 4), |(y, x, channel)| {
+                image.get_pixel(x as u32, y as u32).0[channel]
             });
         let input_mask: Array2<u8> =
             Array2::from_shape_fn((resolution.y, resolution.x), |(y, x)| {
@@ -624,8 +634,10 @@ mod tests {
         println!("Duration of inpaint: {:?}", start.elapsed());
 
         for (x, y, pixel) in image.enumerate_pixels_mut() {
-            let data = input_image[[y as usize, x as usize]];
-            pixel.channels_mut().copy_from_slice(data.as_slice());
+            let data = input_image.slice(s![y as usize, x as usize, ..]);
+            pixel
+                .channels_mut()
+                .copy_from_slice(data.as_slice().unwrap());
         }
         let result = DynamicImage::from(image.clone());
 
@@ -691,19 +703,16 @@ mod tests {
                 mask.get_pixel(x as u32, y as u32)[0]
             });
 
-        let mut input_image: Image<u8, 4> =
-            Image::from_shape_fn((resolution.x, resolution.y), |(y, x)| {
-                image.get_pixel(x as u32, y as u32).0
+        let mut input_image: Image<u8> =
+            Image::from_shape_fn((resolution.x, resolution.y, 4), |(y, x, channel)| {
+                image.get_pixel(x as u32, y as u32).0[channel]
             });
 
         let start = Instant::now();
         telea_inpaint(&mut input_image, input_mask, 5).unwrap();
         println!("Duration of inpaint: {:?}", start.elapsed());
 
-        for (x, y, pixel) in image.enumerate_pixels_mut() {
-            let data = input_image[[y as usize, x as usize]];
-            pixel.channels_mut().copy_from_slice(data.as_slice());
-        }
+        image.copy_from_slice(input_image.as_slice().unwrap());
         let result = DynamicImage::from(image.clone());
 
         if !expected.exists() {

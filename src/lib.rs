@@ -3,111 +3,108 @@
 mod error;
 mod telea;
 
+pub use telea::telea_inpaint;
+
 #[cfg(feature = "image")]
 use std::ops::Deref;
 
 use error::Result;
 use glam::USizeVec2;
-use ndarray::Array2;
-use num_traits::AsPrimitive;
-pub use telea::telea_inpaint;
-
 #[cfg(feature = "image")]
-use image::{ImageBuffer, Luma, LumaA, Primitive, Rgb, Rgba};
+use image::{ImageBuffer, Luma, Pixel, Primitive};
+use ndarray::{Array2, Array3};
+use num_traits::AsPrimitive;
 
 #[cfg(feature = "image")]
 /// Inpaint implementations for the `Image` crate.
 pub trait Inpaint {
-    fn telea_inpaint<P, MaskContainer>(
+    /// Inpaint image with provided mask using Telea algorithm.
+    fn telea_inpaint<MaskPixel, MaskContainer>(
         &mut self,
-        mask: &ImageBuffer<Luma<P>, MaskContainer>,
+        mask: &ImageBuffer<Luma<MaskPixel>, MaskContainer>,
         radius: i32,
     ) -> Result<()>
     where
-        P: Primitive,
-        P: AsPrimitive<f32>,
-        MaskContainer: Deref<Target = [P]>,
-        f32: AsPrimitive<P>;
+        MaskPixel: Primitive + AsPrimitive<f32> + 'static,
+        MaskContainer: Deref<Target = [MaskPixel]>;
 }
 
-/// Create the implementation for a specific image type
-///
-/// Using macros as there is no stable way yet to
-/// use inherited consts reliably without nightly features
-macro_rules! create_inpaint_implementation {
-    ($image_type:ty, $channels:expr, $format:ty) => {
-        #[cfg(feature = "image")]
-        impl Inpaint for $image_type {
-            /// Inpaint image with provided mask using Telea algorithm.
-            fn telea_inpaint<P, MaskContainer>(
-                &mut self,
-                mask: &ImageBuffer<Luma<P>, MaskContainer>,
-                radius: i32,
-            ) -> Result<()>
-            where
-                P: Primitive + 'static,
-                P: AsPrimitive<f32>,
-                MaskContainer: Deref<Target = [P]>,
-                f32: AsPrimitive<P>,
-            {
-                let resolution = self.dimensions();
-                let resolution = USizeVec2::new(resolution.0 as usize, resolution.1 as usize);
-                let mut process_image: Array2<[$format; $channels]> = Array2::from_shape_vec(
-                    (resolution.y, resolution.x),
-                    unsafe {
-                        std::slice::from_raw_parts(
-                            self.as_raw().as_ptr() as *const [$format; $channels],
-                            self.len() / $channels,
-                        )
-                    }
-                    .to_vec(),
-                )?;
+#[cfg(feature = "image")]
+impl<ImagePixel, ImageContainer> Inpaint for ImageBuffer<ImagePixel, Vec<ImageContainer>>
+where
+    ImagePixel: Pixel<Subpixel = ImageContainer>,
+    ImageContainer: Clone + Copy + AsPrimitive<f32>,
+    f32: AsPrimitive<ImageContainer>,
+{
+    fn telea_inpaint<MaskPixel, MaskContainer>(
+        &mut self,
+        mask: &ImageBuffer<Luma<MaskPixel>, MaskContainer>,
+        radius: i32,
+    ) -> Result<()>
+    where
+        MaskPixel: Primitive + AsPrimitive<f32> + 'static,
+        MaskContainer: Deref<Target = [MaskPixel]>,
+    {
+        let resolution = self.dimensions();
+        let resolution = USizeVec2::new(resolution.0 as usize, resolution.1 as usize);
 
-                let mask: Array2<P> =
-                    Array2::from_shape_vec((resolution.y, resolution.x), mask.as_raw().to_vec())?;
+        let mut process_image: Array3<ImageContainer> = Array3::from_shape_vec(
+            (
+                resolution.y,
+                resolution.x,
+                ImagePixel::CHANNEL_COUNT as usize,
+            ),
+            self.as_raw().to_vec(),
+        )?;
 
-                telea_inpaint::<$format, $channels, P>(&mut process_image, mask, radius)?;
+        let mask: Array2<MaskPixel> =
+            Array2::from_shape_vec((resolution.y, resolution.x), mask.as_raw().to_vec())?;
 
-                let flattened: &[$format] = unsafe {
-                    std::slice::from_raw_parts(process_image.as_ptr() as *const $format, self.len())
-                };
-                self.copy_from_slice(flattened);
-                Ok(())
-            }
-        }
-    };
+        telea_inpaint(&mut process_image, mask, radius)?;
+
+        self.copy_from_slice(process_image.as_slice().unwrap());
+        Ok(())
+    }
 }
 
-macro_rules! create_inpaint_implementations {
-    ($($pixel_type:ident, $type:ty, $channels:expr),*) => {
-        $(
-            #[cfg(feature = "image")]
-            create_inpaint_implementation!(ImageBuffer<$pixel_type<$type>, Vec<$type>>, $channels, $type);
-        )*
-    };
-}
+#[cfg(feature = "python-bindings")]
+#[pyo3::pymodule]
+mod inpaint {
+    use crate::error::Result;
+    use crate::telea::telea_inpaint;
+    use numpy::IntoPyArray;
+    use numpy::{PyArray3, PyReadonlyArray2, PyReadonlyArray3};
+    use pyo3::Python;
+    use pyo3::prelude::*;
 
-create_inpaint_implementations! {
-    Rgba, f32, 4,
-    Rgb, f32, 3,
-    LumaA, f32, 2,
-    Luma, f32, 1,
-    Rgba, i32, 4,
-    Rgb, i32, 3,
-    LumaA, i32, 2,
-    Luma, i32, 1,
-    Rgba, u32, 4,
-    Rgb, u32, 3,
-    LumaA, u32, 2,
-    Luma, u32, 1,
-    Rgba, u16, 4,
-    Rgb, u16, 3,
-    LumaA, u16, 2,
-    Luma, u16, 1,
-    Rgba, u8, 4,
-    Rgb, u8, 3,
-    LumaA, u8, 2,
-    Luma, u8, 1
+    fn telea_inpaint_inner_py<'py, T>(
+        py: Python<'py>,
+        image: PyReadonlyArray3<'py, T>,
+        mask: PyReadonlyArray2<'py, T>,
+        radius: i32,
+    ) -> Result<Bound<'py, PyArray3<T>>>
+    where
+        T: numpy::Element + Clone + Copy + num_traits::AsPrimitive<f32> + 'static,
+        f32: num_traits::AsPrimitive<T> + Clone + Copy,
+    {
+        let mut original_image = image.as_array().to_owned();
+        let mask_image = mask.as_array().to_owned();
+
+        telea_inpaint(&mut original_image, mask_image, radius)?;
+
+        Ok(original_image.into_pyarray(py))
+    }
+
+    #[pyfunction]
+    #[pyo3(name = "telea_inpaint")]
+    fn telea_inpaint_py<'py>(
+        py: Python<'py>,
+        image: PyReadonlyArray3<'py, f32>,
+        mask: PyReadonlyArray2<'py, f32>,
+        radius: i32,
+    ) -> Result<Bound<'py, PyArray3<f32>>> {
+        telea_inpaint_inner_py::<f32>(py, image, mask, radius)
+    }
 }
 
 #[cfg(test)]
