@@ -5,20 +5,20 @@ Inpaint crate for image restoration and smooth interpolation of unknown values.
 While inpainting is used for Images, this crate exposes its interface with [ndarrays](https://docs.rs/ndarray/latest/ndarray/).
 Unlike OpenCV, any channel count and pixel type can be used.
 
-The [Telea](./src/telea.rs) algorithm is ported from the [Pyheal](https://github.com/olvb/Pyheal) project, with some optimizations for Rust. With the Python bindings the same result can be achieved with this crate. In testing it is over 30x faster than Pyheal. The sample image takes `0.6` second in Pyheal, while in this crate it takes around `0.02` seconds on my machine.
+The [Telea](https://codeberg.org/gillesvink/inpaint/src/branch/main/src/telea.rs) algorithm is ported from the [Pyheal](https://github.com/olvb/Pyheal) project, with some optimizations for Rust. With the Python bindings the same result can be achieved with this crate. In testing it is over 30x faster than Pyheal. The sample image takes `0.6` second in Pyheal, while in this crate it takes around `0.02` seconds on my machine.
 
 Lets have this image of the toad I recently photographed. Unfortunately, some text has been burned into the image which I desperately want to remove:
 
 | Damaged image           |  Mask                   |
 |-------------------------|-------------------------|
-| ![toad](./test/images/baked/toad.png) | ![Mask](./test/images/mask/text.png) |
+| ![toad](./test/images/baked/toad.png) | ![Mask](https://codeberg.org/gillesvink/inpaint/media/branch/main/test/images/mask/text.png) |
 
 ---
 Running this crate on the image returns this as the result:
 
 | Result                  |
 |-------------------------|
-| ![Result](./test/images/expected/telea/toad_text.png) |
+| ![Result](https://codeberg.org/gillesvink/inpaint/media/branch/main/test/images/expected/telea/toad_text.png) |
 
 You can call this code yourself at `./examples/python/` or `./examples/rust/`.
 ```bash
