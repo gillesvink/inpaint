@@ -5,7 +5,7 @@ import numpy as np
 
 
 @pytest.mark.parametrize(("input_type"), [np.float32, np.uint32, np.int32])
-def test_numpy_interface(input_type: np.TypeAlias) -> None:
+def test_numpy_interface(input_type) -> None:
     """Make sure return type is correct, as telea inpaint supports both images and arrays
 
     Args:

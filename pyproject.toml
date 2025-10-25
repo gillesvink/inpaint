@@ -32,7 +32,10 @@ maintainers = [
 ]
 description = "Fast inpainting image processor."
 dynamic = ["version"]
-dependencies = ["numpy>=1.16.0"]
+dependencies = [
+    "numpy>=1.16.0",
+    "pillow>=11.3.0",
+]
 
 
 [project.urls]
@@ -49,6 +52,11 @@ cache-keys = [
     { file = "pyproject.toml" },
     { file = "Cargo.toml" },
     { file = "**/*.rs" },
+]
+
+[tool.uv.workspace]
+members = [
+    "examples/python",
 ]
 
 [dependency-groups]

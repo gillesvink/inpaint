@@ -1,3 +1,4 @@
+from PIL.Image import Image
 import PIL
 from .inpaint import (
     telea_inpaint,
@@ -11,10 +12,10 @@ class InpaintError(Exception):
 
 
 def telea(
-    image: Union[PIL.Image.Image, np.array],
-    mask: Union[PIL.Image.Image, np.array],
+    image: Union[Image, np.array],
+    mask: Union[Image, np.array],
     radius: int = 5,
-) -> PIL.Image.Image | np.array:
+) -> Union[Image, np.array]:
     """Inpaint the image using the Telea algorithm
 
     Args:

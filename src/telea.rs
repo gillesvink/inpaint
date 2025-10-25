@@ -248,7 +248,7 @@ where
     P: AsPrimitive<f32>,
 {
     FlagArray::from_shape_fn((resolution.y, resolution.x), |(y, x)| {
-        let value: f32 = normalize_value(mask[[y, x]]).round();
+        let value: f32 = normalize_value(mask[[y, x]]).ceil();
         Flag::from_value(value as u8)
     })
 }
@@ -631,6 +631,7 @@ mod tests {
 
         let start = Instant::now();
         telea_inpaint(&mut input_image, input_mask, 5).unwrap();
+
         println!("Duration of inpaint: {:?}", start.elapsed());
 
         for (x, y, pixel) in image.enumerate_pixels_mut() {
