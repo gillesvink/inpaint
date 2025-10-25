@@ -374,9 +374,9 @@ fn inpaint_pixel(
         for x in -radius..=radius {
             let current_coordinate = coordinate.as_ivec2() + IVec2::new(x, y);
             if current_coordinate.y < 0
-                || current_coordinate.y > resolution.y as i32
+                || current_coordinate.y >= resolution.y as i32
                 || current_coordinate.x < 0
-                || current_coordinate.x > resolution.x as i32
+                || current_coordinate.x >= resolution.x as i32
             {
                 continue;
             }
@@ -519,6 +519,10 @@ where
         let neighbors = get_neighbors(coordinates.as_ivec2());
 
         for neighbor in neighbors {
+            if neighbor.y >= resolution.y as i32 || neighbor.x >= resolution.x as i32 {
+                continue;
+            }
+
             let distance = match get_eikonal(
                 resolution,
                 &mut process_data.distances,
