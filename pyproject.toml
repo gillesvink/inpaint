@@ -30,7 +30,7 @@ authors = [{ name = "Gilles Vink", email = "gillesvink@noreply.codeberg.org" }]
 maintainers = [
     { name = "Gilles Vink", email = "gillesvink@noreply.codeberg.org" },
 ]
-description = "Fast inpainting image processor."
+description = "Easy to use library for inpainting images."
 dynamic = ["version"]
 dependencies = [
     "numpy>=1.16.0",
