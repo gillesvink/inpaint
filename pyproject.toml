@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "inpaint"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 classifiers = [
     'License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)',
     "Operating System :: POSIX :: Linux",
@@ -34,7 +34,7 @@ description = "Easy to use library for inpainting images."
 dynamic = ["version"]
 dependencies = [
     "numpy>=1.16.0",
-    "pillow>=11.3.0",
+    "pillow>=10.0.0",
 ]
 
 
@@ -60,4 +60,4 @@ members = [
 ]
 
 [dependency-groups]
-dev = ["pytest>=8.4.2"]
+dev = ["pytest>=8.3.0"]

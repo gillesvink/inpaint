@@ -1,3 +1,9 @@
+[![Tests](https://github.com/gillesvink/inpaint/actions/workflows/test.yaml/badge.svg)](https://github.com/gillesvink/inpaint/actions/workflows/test.yaml) 
+[![License](https://img.shields.io/crates/l/inpaint)](https://crates.io/crates/inpaint) 
+[![Version](https://img.shields.io/crates/v/inpaint)](https://crates.io/crates/inpaint) 
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/inpaint)](https://pypi.org/project/inpaint/) 
+[![Python Versions](https://img.shields.io/pypi/pyversions/inpaint)](https://pypi.org/project/inpaint/) 
+
 # Inpaint
 
 Inpaint crate for image restoration and smooth interpolation of unknown values.
@@ -11,7 +17,7 @@ Lets have this image of the toad I recently photographed. Unfortunately, some te
 
 | Damaged image           |  Mask                   |
 |-------------------------|-------------------------|
-| ![toad](./test/images/baked/toad.png) | ![Mask](https://codeberg.org/gillesvink/inpaint/media/branch/main/test/images/mask/text.png) |
+| ![toad](https://codeberg.org/gillesvink/inpaint/media/branch/main/test/images/baked/toad.png) | ![Mask](https://codeberg.org/gillesvink/inpaint/media/branch/main/test/images/mask/text.png) |
 
 ---
 Running this crate on the image returns this as the result:
