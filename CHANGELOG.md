@@ -11,17 +11,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Other
 
-- Remove unused dependencies and update description in pyproject.toml
-- Remove dependency in project and update classifier
-- Change to direct links
-- Add release plz
-- Fix out of bounds
-- Add run pytest
-- Rename frog to toad :)
-- Add readme and examples, also fix mask sensitivity for half intense values
-- Run tests in release mode
-- Add test workflow
-- Add python interface and tests
-- Add python bindings, add global image trait and refactor into ndarray3 structure for any channel support
-- Initial commit
-- Initial commit
+- Initial release
