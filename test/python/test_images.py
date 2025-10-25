@@ -48,19 +48,19 @@ def compare_image_arrays(a: PngImageFile, b: PngImageFile, tolerance: float):
             "./test/images/expected/telea/bird_text.png",
         ),
         (
-            "./test/images/input/frog.png",
+            "./test/images/input/toad.png",
             "./test/images/mask/thin.png",
-            "./test/images/expected/telea/frog_thin.png",
+            "./test/images/expected/telea/toad_thin.png",
         ),
         (
-            "./test/images/input/frog.png",
+            "./test/images/input/toad.png",
             "./test/images/mask/medium.png",
-            "./test/images/expected/telea/frog_medium.png",
+            "./test/images/expected/telea/toad_medium.png",
         ),
         (
-            "./test/images/input/frog.png",
+            "./test/images/input/toad.png",
             "./test/images/mask/text.png",
-            "./test/images/expected/telea/frog_text.png",
+            "./test/images/expected/telea/toad_text.png",
         ),
     ],
 )

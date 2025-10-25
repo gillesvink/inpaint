@@ -97,19 +97,19 @@ mod tests {
                     PathBuf::from(format!("./test/images/expected/{}/bird_text.png", "telea"))
                 )]
                 #[case(
-                    PathBuf::from("./test/images/input/frog.png"),
+                    PathBuf::from("./test/images/input/toad.png"),
                     PathBuf::from("./test/images/mask/thin.png"),
-                    PathBuf::from(format!("./test/images/expected/{}/frog_thin.png", "telea"))
+                    PathBuf::from(format!("./test/images/expected/{}/toad_thin.png", "telea"))
                 )]
                 #[case(
-                    PathBuf::from("./test/images/input/frog.png"),
+                    PathBuf::from("./test/images/input/toad.png"),
                     PathBuf::from("./test/images/mask/medium.png"),
-                    PathBuf::from(format!("./test/images/expected/{}/frog_medium.png", "telea"))
+                    PathBuf::from(format!("./test/images/expected/{}/toad_medium.png", "telea"))
                 )]
                 #[case(
-                    PathBuf::from("./test/images/input/frog.png"),
+                    PathBuf::from("./test/images/input/toad.png"),
                     PathBuf::from("./test/images/mask/text.png"),
-                    PathBuf::from(format!("./test/images/expected/{}/frog_text.png", "telea"))
+                    PathBuf::from(format!("./test/images/expected/{}/toad_text.png", "telea"))
                 )]
                 fn [< test_inpaint_image_type _ $test_name >](
                     #[case] image: PathBuf,

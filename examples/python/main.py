@@ -3,7 +3,7 @@ import inpaint
 from PIL import Image
 
 def main():
-    image = Image.open("../../test/images/baked/frog.png")
+    image = Image.open("../../test/images/baked/toad.png")
     mask = Image.open("../../test/images/mask/text.png")
 
     start_time = time.time()

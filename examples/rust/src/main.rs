@@ -2,7 +2,7 @@ use inpaint::prelude::*;
 use std::time::Instant;
 
 fn main() {
-    let mut image = image::open("../../test/images/baked/frog.png").unwrap().to_rgb8();
+    let mut image = image::open("../../test/images/baked/toad.png").unwrap().to_rgb8();
     let mask = image::open("../../test/images/mask/text.png").unwrap().to_luma8();
 
     let start_time = Instant::now();
