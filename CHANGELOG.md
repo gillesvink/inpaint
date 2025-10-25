@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1](https://codeberg.org/gillesvink/inpaint/compare/v0.1.0...v0.1.1) - 2025-10-25
+
+### Other
+
+- Lower dependency requirements for Python to support Python 3.8, fix image in readme  and add badges
+
 ## [0.1.0](https://codeberg.org/gillesvink/inpaint/releases/tag/v0.1.0) - 2025-10-25
 
 ### Other
