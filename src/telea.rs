@@ -17,7 +17,7 @@ use num_traits::AsPrimitive;
 use std::cmp::Reverse;
 use std::{cmp::Ordering, collections::BinaryHeap};
 
-/// Just a simple alias to the Array2 type
+/// Just a simple alias to the Array type
 type Image<P> = Array3<P>;
 /// Array containing pixel state flags
 type FlagArray = Array2<Flag>;
