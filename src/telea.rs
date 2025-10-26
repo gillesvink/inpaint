@@ -491,7 +491,33 @@ impl ProcessData {
     }
 }
 
-/// Inpaint the input image according to the mask provided.
+/// ## Inpaint the input image according to the mask provided.
+///
+/// 3d arrays are expected for inpainting of the image, while 2d array is expected for mask. 
+/// As the mask consists of only one mask channel.
+/// 
+/// In the image array, the rows is the height, the columns is the width
+/// and the dimensions are the channels.
+/// 
+/// ### Arguments:
+///
+/// * `image`: array to inpaint.
+/// * `mask`: mask that defines the region that will be inpainted
+/// * `radius`: radius of near pixels that are considered for npainting. 
+/// 
+/// ### Example
+/// ```rust
+/// use inpaint::telea_inpaint;
+/// use ndarray::{Array2, Array3};
+/// use glam::USizeVec2;
+/// 
+/// let resolution = USizeVec2::new(1920, 1080);
+/// // obviously you need to use actual data, this is just an example
+/// let mut input_image = Array3::from_elem((resolution.y, resolution.x, 4), 0.0);
+/// let mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
+/// 
+/// telea_inpaint(&mut input_image, test_mask, 1).unwrap();
+/// ```
 pub fn telea_inpaint<ImageType, MaskType>(
     image: &mut Image<ImageType>,
     mask: Array2<MaskType>,
@@ -502,7 +528,7 @@ where
     f32: num_traits::AsPrimitive<ImageType>,
     MaskType: AsPrimitive<f32> + Copy + 'static,
 {
-    if image.shape()[0] != mask.ncols() || image.shape()[1] != mask.nrows() {
+    if image.shape()[1] != mask.ncols() || image.shape()[0] != mask.nrows() {
         return Err(Error::DimensionMismatch);
     }
 
@@ -566,7 +592,7 @@ where
 mod tests {
     use super::*;
     use image::{DynamicImage, Pixel, Rgba32FImage};
-    use ndarray::s;
+    use ndarray::{arr3, s};
     use rstest::rstest;
     use std::path::PathBuf;
     use std::time::Instant;
@@ -733,4 +759,16 @@ mod tests {
         println!("Test got score: {}", comparison_score);
         assert!(comparison_score >= 0.99); // Slightly lower because of precision
     }
+
+    #[test]
+    fn inpaint_rectangular() {
+        let resolution = USizeVec2::new(1920, 1080);
+        let mut test_shape = Array3::from_elem((resolution.y, resolution.x, 4), 0.0);
+        let test_mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
+
+        telea_inpaint(&mut test_shape, test_mask, 1).unwrap();
+        
+
+    }
+
 }
