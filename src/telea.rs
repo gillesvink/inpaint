@@ -592,7 +592,7 @@ where
 mod tests {
     use super::*;
     use image::{DynamicImage, Pixel, Rgba32FImage};
-    use ndarray::{arr3, s};
+    use ndarray::s;
     use rstest::rstest;
     use std::path::PathBuf;
     use std::time::Instant;
