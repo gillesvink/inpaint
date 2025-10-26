@@ -40,11 +40,14 @@ def telea(
     image_array = _convert_to_float(image_array)
     mask_array = _convert_to_float(mask_array)
 
-    output: np.array = telea_inpaint(
-        image_array,
-        mask_array,
-        radius,
-    )
+    try:
+        output: np.array = telea_inpaint(
+            image_array,
+            mask_array,
+            radius,
+        )
+    except RuntimeError as error: 
+        raise InpaintError(str(error)) from error
 
     if not np.issubdtype(original_image_type, np.floating):
         output *= np.iinfo(original_image_type).max
