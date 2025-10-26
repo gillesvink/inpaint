@@ -11,7 +11,7 @@ keywords = ["inpainting", "image-processing"]
 categories = ["multimedia", "graphics"]
 
 [features]
-default = ["image", "python-bindings"]
+default = []
 image = ["dep:image"]
 python-bindings = ["dep:pyo3", "dep:numpy"]
 

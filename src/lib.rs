@@ -1,9 +1,11 @@
 #![doc = include_str!("../README.md")]
+#![allow(unused_imports)]
 
 mod error;
 mod telea;
 pub mod prelude;
 pub use telea::telea_inpaint;
+pub use prelude::*;
 
 #[cfg(feature = "python-bindings")]
 #[pyo3::pymodule]

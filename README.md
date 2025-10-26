@@ -11,6 +11,20 @@ Inpaint crate for image restoration and smooth interpolation of unknown values.
 While inpainting is used for Images, this crate exposes its interface with [ndarrays](https://docs.rs/ndarray/latest/ndarray/).
 Unlike OpenCV, any channel count and pixel type can be used.
 
+## Add to your project
+
+For Rust, when you want to use it on images
+```bash
+cargo add inpaint --features image
+```
+
+Or in Python with uv 
+```bash
+uv add inpaint
+```
+
+## Information
+
 The [Telea](https://codeberg.org/gillesvink/inpaint/src/branch/main/src/telea.rs) algorithm is ported from the [Pyheal](https://github.com/olvb/Pyheal) project, with some optimizations for Rust. With the Python bindings the same result can be achieved with this crate. In testing it is over 30x faster than Pyheal. The sample image takes `0.6` second in Pyheal, while in this crate it takes around `0.02` seconds on my machine.
 
 Lets have this image of the toad I recently photographed. Unfortunately, some text has been burned into the image which I desperately want to remove:
@@ -48,11 +62,15 @@ cd examples/rust && cargo run --release
 ### Inpaint an ImageBuffer in Rust
 You can also run the example in examples/simple. This will use the inpaint library and output the inpainted image as `output.png`.
 
+> [!IMPORTANT]  
+> You need to have the `image` feature enabled.
+
 ```rust
 use inpaint::prelude::*;
 let mut image = image::open("./test/images/input/toad.png").unwrap().to_rgba32f();
 let mask = image::open("./test/images/mask/text.png").unwrap().to_luma32f();
 
+#[cfg(feature = "image")] // feature needs to be enabled for it to work
 image.telea_inpaint(&mask, 3);
 ```
 
@@ -67,4 +85,22 @@ mask = Image.open("./test/images/mask/text.png")
 output = inpaint.telea(image, mask, 3)
 
 output.save("./output.png")
+```
+
+### Inpaint an array in Rust
+
+When not using the Image crate, just use the raw ndarrays.
+
+```rust
+use inpaint::telea_inpaint;
+use ndarray::{Array2, Array3};
+use glam::USizeVec2;
+
+let resolution = USizeVec2::new(1920, 1080);
+let channels = 4;
+// obviously you need to use actual data, this is just an example
+let mut input_image = Array3::from_elem((resolution.y, resolution.x, channels), 0.0);
+let mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
+
+telea_inpaint(&mut input_image, mask, 1).unwrap();
 ```

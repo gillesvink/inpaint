@@ -16,7 +16,7 @@ jobs:
 
       - name: Run tests
         run: |
-          cargo test --release
+          cargo test --release --features image
 
   test_python:
     runs-on: ubuntu-latest
