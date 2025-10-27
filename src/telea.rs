@@ -12,7 +12,7 @@
 use crate::error::{Error, Result};
 use core::f32;
 use glam::{IVec2, USizeVec2, Vec2, Vec4};
-use ndarray::{Array1, Array2, Array3, arr1, s};
+use ndarray::{Array1, Array2, Array3, ArrayView2, ArrayViewMut3, arr1, s};
 use num_traits::AsPrimitive;
 use std::cmp::Reverse;
 use std::{cmp::Ordering, collections::BinaryHeap};
@@ -243,7 +243,7 @@ where
 }
 
 /// Convert the input array of any type to the FlagArray (which consists of enum values)
-fn convert_mask_to_flag_array<P>(mask: &Array2<P>, resolution: USizeVec2) -> FlagArray
+fn convert_mask_to_flag_array<P>(mask: &ArrayView2<P>, resolution: USizeVec2) -> FlagArray
 where
     P: AsPrimitive<f32>,
 {
@@ -431,8 +431,8 @@ impl ProcessData {
     /// Initialize the process data and precompute the distances, flags and fill heap
     pub fn new<ImageType, MaskType>(
         resolution: USizeVec2,
-        image: &Image<ImageType>,
-        mask: &Array2<MaskType>,
+        image: &ArrayViewMut3<ImageType>,
+        mask: &ArrayView2<MaskType>,
         radius: i32,
     ) -> Result<Self>
     where
@@ -493,34 +493,34 @@ impl ProcessData {
 
 /// ## Inpaint the input image according to the mask provided.
 ///
-/// 3d arrays are expected for inpainting of the image, while 2d array is expected for mask. 
+/// 3d arrays are expected for inpainting of the image, while 2d array is expected for mask.
 /// As the mask consists of only one mask channel.
-/// 
+///
 /// In the image array, the rows is the height, the columns is the width
 /// and the dimensions are the channels.
-/// 
+///
 /// ### Arguments:
 ///
 /// * `image`: array to inpaint.
 /// * `mask`: mask that defines the region that will be inpainted
-/// * `radius`: radius of near pixels that are considered for npainting. 
-/// 
+/// * `radius`: radius of near pixels that are considered for npainting.
+///
 /// ### Example
 /// ```rust
 /// use inpaint::telea_inpaint;
 /// use ndarray::{Array2, Array3};
 /// use glam::USizeVec2;
-/// 
+///
 /// let resolution = USizeVec2::new(1920, 1080);
 /// // obviously you need to use actual data, this is just an example
 /// let mut input_image = Array3::from_elem((resolution.y, resolution.x, 4), 0.0);
 /// let mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
-/// 
-/// telea_inpaint(&mut input_image, mask, 1).unwrap();
+///
+/// telea_inpaint(&mut input_image.view_mut(), &mask.view(), 1).unwrap();
 /// ```
 pub fn telea_inpaint<ImageType, MaskType>(
-    image: &mut Image<ImageType>,
-    mask: Array2<MaskType>,
+    image: &mut ArrayViewMut3<ImageType>,
+    mask: &ArrayView2<MaskType>,
     radius: i32,
 ) -> Result<()>
 where
@@ -533,7 +533,7 @@ where
     }
 
     let resolution = USizeVec2::new(image.shape()[1], image.shape()[0]);
-    let mut process_data = ProcessData::new(resolution, image, &mask, radius)?;
+    let mut process_data = ProcessData::new(resolution, image, mask, radius)?;
     while !process_data.heap.is_empty() {
         let coordinates = if let Some(node) = process_data.heap.pop() {
             node.0.coordinates
@@ -592,6 +592,7 @@ where
 mod tests {
     use super::*;
     use image::{DynamicImage, Pixel, Rgba32FImage};
+    use image_ndarray::prelude::*;
     use ndarray::s;
     use rstest::rstest;
     use std::path::PathBuf;
@@ -647,29 +648,18 @@ mod tests {
     /// Test inpaint of provided image with mask
     fn test_inpaint_f32(#[case] image: PathBuf, #[case] mask: PathBuf, #[case] expected: PathBuf) {
         let mut image = image::open(image).unwrap().to_rgba32f();
-        let (width, height) = image.dimensions();
-        let resolution = USizeVec2::new(width as usize, height as usize);
         let mask = image::open(mask).unwrap().to_luma8();
-        let mut input_image: Image<f32> =
-            Image::from_shape_fn((resolution.x, resolution.y, 4), |(y, x, channel)| {
-                image.get_pixel(x as u32, y as u32).0[channel]
-            });
-        let input_mask: Array2<u8> =
-            Array2::from_shape_fn((resolution.y, resolution.x), |(y, x)| {
-                mask.get_pixel(x as u32, y as u32)[0]
-            });
 
         let start = Instant::now();
-        telea_inpaint(&mut input_image, input_mask, 5).unwrap();
+        telea_inpaint(
+            &mut image.as_ndarray_mut(),
+            &mask.to_ndarray().slice(ndarray::s![.., .., 0]),
+            5,
+        )
+        .unwrap();
 
         println!("Duration of inpaint: {:?}", start.elapsed());
 
-        for (x, y, pixel) in image.enumerate_pixels_mut() {
-            let data = input_image.slice(s![y as usize, x as usize, ..]);
-            pixel
-                .channels_mut()
-                .copy_from_slice(data.as_slice().unwrap());
-        }
         let result = DynamicImage::from(image.clone());
 
         if !expected.exists() {
@@ -725,25 +715,19 @@ mod tests {
 
     /// Test inpaint of provided image with mask
     fn test_inpaint_u8(#[case] image: PathBuf, #[case] mask: PathBuf, #[case] expected: PathBuf) {
-        let mut image = image::open(image).unwrap().to_rgba8();
-        let (width, height) = image.dimensions();
-        let resolution = USizeVec2::new(width as usize, height as usize);
+        let mut image = image::open(image).unwrap().to_luma8();
         let mask = image::open(mask).unwrap().to_luma8();
-        let input_mask: Array2<u8> =
-            Array2::from_shape_fn((resolution.x, resolution.y), |(y, x)| {
-                mask.get_pixel(x as u32, y as u32)[0]
-            });
-
-        let mut input_image: Image<u8> =
-            Image::from_shape_fn((resolution.x, resolution.y, 4), |(y, x, channel)| {
-                image.get_pixel(x as u32, y as u32).0[channel]
-            });
 
         let start = Instant::now();
-        telea_inpaint(&mut input_image, input_mask, 5).unwrap();
+        telea_inpaint(
+            &mut image.as_ndarray_mut(),
+            &mask.to_ndarray().slice(ndarray::s![.., .., 0]),
+            5,
+        )
+        .unwrap();
+
         println!("Duration of inpaint: {:?}", start.elapsed());
 
-        image.copy_from_slice(input_image.as_slice().unwrap());
         let result = DynamicImage::from(image.clone());
 
         if !expected.exists() {
@@ -764,11 +748,9 @@ mod tests {
     fn inpaint_rectangular() {
         let resolution = USizeVec2::new(1920, 1080);
         let mut test_shape = Array3::from_elem((resolution.y, resolution.x, 4), 0.0);
+
         let test_mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
 
-        telea_inpaint(&mut test_shape, test_mask, 1).unwrap();
-        
-
+        telea_inpaint(&mut test_shape.view_mut(), &test_mask.view(), 1).unwrap();
     }
-
 }

@@ -2,10 +2,10 @@
 #![allow(unused_imports)]
 
 mod error;
-mod telea;
 pub mod prelude;
-pub use telea::telea_inpaint;
+mod telea;
 pub use prelude::*;
+pub use telea::telea_inpaint;
 
 #[cfg(feature = "python-bindings")]
 #[pyo3::pymodule]
@@ -29,7 +29,7 @@ mod inpaint {
         let mut original_image = image.as_array().to_owned();
         let mask_image = mask.as_array().to_owned();
 
-        crate::telea::telea_inpaint(&mut original_image, mask_image, radius)?;
+        crate::telea::telea_inpaint(&mut original_image.view_mut(), &mask_image.view(), radius)?;
 
         Ok(original_image.into_pyarray(py))
     }

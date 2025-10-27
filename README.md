@@ -102,5 +102,5 @@ let channels = 4;
 let mut input_image = Array3::from_elem((resolution.y, resolution.x, channels), 0.0);
 let mask = Array2::from_elem((resolution.y, resolution.x), 0.0);
 
-telea_inpaint(&mut input_image, mask, 1).unwrap();
+telea_inpaint(&mut input_image.view_mut(), &mask.view(), 1).unwrap();
 ```
