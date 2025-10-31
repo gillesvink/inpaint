@@ -1,4 +1,4 @@
-[![Tests](https://github.com/gillesvink/inpaint/actions/workflows/test.yaml/badge.svg)](https://github.com/gillesvink/inpaint/actions/workflows/test.yaml) 
+[![Tests](https://ci.codeberg.org/api/badges/15490/status.svg)](https://ci.codeberg.org/repos/15490)
 [![License](https://img.shields.io/crates/l/inpaint)](https://crates.io/crates/inpaint) 
 [![Version](https://img.shields.io/crates/v/inpaint)](https://crates.io/crates/inpaint) 
 [![PyPI - Downloads](https://img.shields.io/pypi/dm/inpaint)](https://pypi.org/project/inpaint/) 
