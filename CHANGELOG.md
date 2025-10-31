@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4](https://codeberg.org/gillesvink/inpaint/compare/v0.1.3...v0.1.4) - 2025-10-31
+
+### Other
+
+- expose error as public
+- Fix badge and set requirement to py 3.9
+- Add woodpecker tests
+
 ## [0.1.3](https://codeberg.org/gillesvink/inpaint/compare/v0.1.2...v0.1.3) - 2025-10-27
 
 ### Other
