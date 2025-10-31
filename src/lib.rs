@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 
 mod error;
+pub use error::Error;
 pub mod prelude;
 mod telea;
 pub use prelude::*;
