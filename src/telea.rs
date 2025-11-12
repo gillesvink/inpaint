@@ -314,9 +314,9 @@ fn get_eikonal(
     neighbor: IVec2,
 ) -> Option<f32> {
     if neighbor.y < 0
-        || neighbor.y > resolution.y as i32
+        || neighbor.y >= resolution.y as i32
         || neighbor.x < 0
-        || neighbor.x > resolution.x as i32
+        || neighbor.x >= resolution.x as i32
     {
         return None;
     }
