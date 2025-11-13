@@ -17,8 +17,6 @@ pub enum Error {
     HeapDoesNotContainData,
     #[error("NDArray had an error during initializaiton of shape: {0}")]
     NDArray(#[from] ndarray::ShapeError),
-    #[error("{0}")]
-    Custom(String),
 }
 
 #[cfg(feature = "python-bindings")]
@@ -28,4 +26,4 @@ impl std::convert::From<Error> for PyErr {
     }
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = core::result::Result<T, Error>;

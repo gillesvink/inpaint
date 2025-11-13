@@ -14,7 +14,7 @@ use core::f32;
 use glam::{IVec2, USizeVec2, Vec2, Vec4};
 use ndarray::{Array1, Array2, Array3, ArrayView2, ArrayViewMut3, arr1, s};
 use num_traits::AsPrimitive;
-use std::cmp::Reverse;
+use core::cmp::Reverse;
 use std::{cmp::Ordering, collections::BinaryHeap};
 
 /// Just a simple alias to the Array type
@@ -135,9 +135,9 @@ fn solve_eikonal(
     let b_distance = distances[[b_usize.y, b_usize.x]];
 
     if a_flags == Flag::Known && b_flags == Flag::Known {
-        let distance = 2.0 - (a_distance - b_distance).powf(2.0);
+        let distance = 2.0 - libm::powf(a_distance - b_distance, 2.0);
         if distance > 0.0 {
-            let r = distance.sqrt();
+            let r = libm::sqrtf(distance);
             let mut s = (a_distance + b_distance - r) / 2.0;
             if s >= a_distance && s >= b_distance {
                 return s;
@@ -219,17 +219,17 @@ where
     P: AsPrimitive<f32>,
 {
     value.as_()
-        / match std::any::TypeId::of::<P>() {
-            id if id == std::any::TypeId::of::<u8>() => u8::MAX as f32,
-            id if id == std::any::TypeId::of::<u16>() => u16::MAX as f32,
-            id if id == std::any::TypeId::of::<u32>() => u32::MAX as f32,
-            id if id == std::any::TypeId::of::<u32>() => u64::MAX as f32,
-            id if id == std::any::TypeId::of::<u32>() => u128::MAX as f32,
-            id if id == std::any::TypeId::of::<i8>() => i8::MAX as f32,
-            id if id == std::any::TypeId::of::<i16>() => i16::MAX as f32,
-            id if id == std::any::TypeId::of::<i32>() => i32::MAX as f32,
-            id if id == std::any::TypeId::of::<i32>() => i64::MAX as f32,
-            id if id == std::any::TypeId::of::<i32>() => i128::MAX as f32,
+        / match core::any::TypeId::of::<P>() {
+            id if id == core::any::TypeId::of::<u8>() => u8::MAX as f32,
+            id if id == core::any::TypeId::of::<u16>() => u16::MAX as f32,
+            id if id == core::any::TypeId::of::<u32>() => u32::MAX as f32,
+            id if id == core::any::TypeId::of::<u32>() => u64::MAX as f32,
+            id if id == core::any::TypeId::of::<u32>() => u128::MAX as f32,
+            id if id == core::any::TypeId::of::<i8>() => i8::MAX as f32,
+            id if id == core::any::TypeId::of::<i16>() => i16::MAX as f32,
+            id if id == core::any::TypeId::of::<i32>() => i32::MAX as f32,
+            id if id == core::any::TypeId::of::<i32>() => i64::MAX as f32,
+            id if id == core::any::TypeId::of::<i32>() => i128::MAX as f32,
             _ => 1.0,
         }
 }
@@ -377,8 +377,9 @@ fn inpaint_pixel(
                 continue;
             }
             let direction = coordinate.as_ivec2() - neighbor.as_ivec2();
-            let length_pow = (direction.x as f32).powi(2) + (direction.y as f32).powi(2);
-            let length = length_pow.sqrt();
+            let length_pow =
+                libm::powf(direction.x as f32, 2.0) + libm::powf(direction.y as f32, 2.0);
+            let length = libm::sqrtf(length_pow);
             if length > radius as f32 {
                 continue;
             }
@@ -405,8 +406,8 @@ fn inpaint_pixel(
             weight_sum += weight;
         }
     }
-    for i in output_pixel.iter_mut() {
-        *i /= weight_sum;
+    for channel in output_pixel.iter_mut() {
+        *channel /= weight_sum;
     }
     output_pixel
 }
@@ -435,7 +436,7 @@ impl ProcessData {
         let process_image: Image<f32> = image.mapv(|pixel| pixel.as_());
         let mask_array = convert_mask_to_flag_array(mask, resolution);
         let mut flags = mask_array
-            .clone()
+            .to_owned()
             .mapv(|f| if f == Flag::Band { Flag::Inside } else { f });
         let mut heap = BinaryHeap::new();
         let non_zero: Vec<_> = flags
@@ -562,7 +563,7 @@ where
             );
             process_data
                 .process_image
-                .slice_mut(s![neighbor.y, neighbor.x, 0..])
+                .slice_mut(s![neighbor.y, neighbor.x, ..])
                 .assign(&pixel);
 
             process_data.flags[[neighbor.y as usize, neighbor.x as usize]] = Flag::Band;
@@ -604,42 +605,57 @@ mod tests {
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_thin.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_thin.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_medium.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_medium.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_large.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_large.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_text.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_text.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_thin.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_thin.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_medium.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_medium.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_large.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_large.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_text.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_text.png")
+    )]
+    #[case(
+        PathBuf::from("./test/images/input/pizza.png"),
+        PathBuf::from("./test/images/mask/rectangle.png"),
+        PathBuf::from("./test/images/expected/telea/pizza_rectangle.png")
+    )]
+    #[case(
+        PathBuf::from("./test/images/input/pizza.png"),
+        PathBuf::from("./test/images/mask/rectangle-strokes.png"),
+        PathBuf::from("./test/images/expected/telea/pizza_rectangle-strokes.png")
+    )]
+    #[case(
+        PathBuf::from("./test/images/input/pizza.png"),
+        PathBuf::from("./test/images/mask/rectangle-half.png"),
+        PathBuf::from("./test/images/expected/telea/pizza_rectangle-half.png")
     )]
 
     /// Test inpaint of provided image with mask
@@ -677,37 +693,37 @@ mod tests {
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_thin.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_thin.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_medium.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_medium.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_large.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_large.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/bird.png"),
         PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from(format!("./test/images/expected/{}/bird_text.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/bird_text.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_thin.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_thin.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_medium.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_medium.png")
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from(format!("./test/images/expected/{}/toad_text.png", "telea"))
+        PathBuf::from("./test/images/expected/telea/toad_text.png")
     )]
 
     /// Test inpaint of provided image with mask
