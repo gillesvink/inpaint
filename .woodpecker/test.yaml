@@ -12,9 +12,10 @@ steps:
     image: rust:1.91-trixie
     commands:
       - apt update && apt install python3-dev -y
-      - cargo test --no-default-features --release
-      - cargo test --features python-bindings --release
-      - cargo test --features image --release
+      - cargo test --no-default-features --features std --release
+      - cargo test --no-default-features --features libm --release
+      - cargo test --no-default-features --features image,std --release
+      - cargo test --no-default-features --features python-bindings --release
 
   test_python:
     image: ghcr.io/astral-sh/uv:debian

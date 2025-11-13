@@ -1,5 +1,6 @@
 #![doc = include_str!("../README.md")]
 #![allow(unused_imports)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 mod error;
 pub use error::Error;

@@ -10,12 +10,21 @@
 /// https://www.olivier-augereau.com/docs/2004JGraphToolsTelea.pdf and
 /// https://webspace.science.uu.nl/~telea001/Shapes/Inpainting
 use crate::error::{Error, Result};
+use core::cmp::Ordering;
+use core::cmp::Reverse;
 use core::f32;
 use glam::{IVec2, USizeVec2, Vec2, Vec4};
 use ndarray::{Array1, Array2, Array3, ArrayView2, ArrayViewMut3, arr1, s};
 use num_traits::AsPrimitive;
-use core::cmp::Reverse;
-use std::{cmp::Ordering, collections::BinaryHeap};
+#[cfg(not(feature = "libm"))]
+use num_traits::Float;
+#[cfg(feature = "std")]
+use std::collections::BinaryHeap;
+
+#[cfg(not(feature = "std"))]
+extern crate alloc;
+#[cfg(not(feature = "std"))]
+use alloc::{collections::BinaryHeap, vec, vec::Vec};
 
 /// Just a simple alias to the Array type
 type Image<P> = Array3<P>;
@@ -107,6 +116,25 @@ impl PartialEq for QueueItem {
 
 impl Eq for QueueItem {}
 
+#[cfg(not(feature = "libm"))]
+fn powi(value: f32, pow: i32) -> f32 {
+    value.powi(pow)
+}
+
+#[cfg(feature = "libm")]
+fn powi(value: f32, pow: i32) -> f32 {
+    libm::powf(value, pow as f32)
+}
+
+#[cfg(not(feature = "libm"))]
+fn sqrt(value: f32) -> f32 {
+    value.sqrt()
+}
+
+#[cfg(feature = "libm")]
+fn sqrt(value: f32) -> f32 {
+    libm::sqrtf(value)
+}
 /// Solve the eikonal equation
 fn solve_eikonal(
     a: IVec2,
@@ -135,9 +163,9 @@ fn solve_eikonal(
     let b_distance = distances[[b_usize.y, b_usize.x]];
 
     if a_flags == Flag::Known && b_flags == Flag::Known {
-        let distance = 2.0 - libm::powf(a_distance - b_distance, 2.0);
+        let distance = 2.0 - powi(a_distance - b_distance, 2);
         if distance > 0.0 {
-            let r = libm::sqrtf(distance);
+            let r = sqrt(distance);
             let mut s = (a_distance + b_distance - r) / 2.0;
             if s >= a_distance && s >= b_distance {
                 return s;
@@ -377,9 +405,8 @@ fn inpaint_pixel(
                 continue;
             }
             let direction = coordinate.as_ivec2() - neighbor.as_ivec2();
-            let length_pow =
-                libm::powf(direction.x as f32, 2.0) + libm::powf(direction.y as f32, 2.0);
-            let length = libm::sqrtf(length_pow);
+            let length_pow = powi(direction.x as f32, 2) + powi(direction.y as f32, 2);
+            let length = sqrt(length_pow);
             if length > radius as f32 {
                 continue;
             }
@@ -588,82 +615,76 @@ mod tests {
     use image_ndarray::prelude::*;
     use ndarray::s;
     use rstest::rstest;
-    use std::path::PathBuf;
-    use std::time::Instant;
-
-    /// Just a utility to make it easier to save the test results
-    fn store_test_result(image: DynamicImage, path: PathBuf) {
-        image.to_rgb8().save(path).unwrap();
-    }
-
-    fn load_test_image(path: PathBuf) -> Rgba32FImage {
-        let image = image::open(path);
-        image.unwrap().to_rgba32f()
-    }
+    use time::OffsetDateTime;
 
     #[rstest]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from("./test/images/expected/telea/bird_thin.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/thin.png"),
+        include_bytes!("../test/images/expected/telea/bird_thin.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from("./test/images/expected/telea/bird_medium.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/medium.png"),
+        include_bytes!("../test/images/expected/telea/bird_medium.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from("./test/images/expected/telea/bird_large.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/large.png"),
+        include_bytes!("../test/images/expected/telea/bird_large.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from("./test/images/expected/telea/bird_text.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/text.png"),
+        include_bytes!("../test/images/expected/telea/bird_text.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from("./test/images/expected/telea/toad_thin.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/thin.png"),
+        include_bytes!("../test/images/expected/telea/toad_thin.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from("./test/images/expected/telea/toad_medium.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/medium.png"),
+        include_bytes!("../test/images/expected/telea/toad_medium.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from("./test/images/expected/telea/toad_large.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/large.png"),
+        include_bytes!("../test/images/expected/telea/toad_large.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from("./test/images/expected/telea/toad_text.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/text.png"),
+        include_bytes!("../test/images/expected/telea/toad_text.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/pizza.png"),
-        PathBuf::from("./test/images/mask/rectangle.png"),
-        PathBuf::from("./test/images/expected/telea/pizza_rectangle.png")
+        include_bytes!("../test/images/input/pizza.png"),
+        include_bytes!("../test/images/mask/rectangle.png"),
+        include_bytes!("../test/images/expected/telea/pizza_rectangle.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/pizza.png"),
-        PathBuf::from("./test/images/mask/rectangle-strokes.png"),
-        PathBuf::from("./test/images/expected/telea/pizza_rectangle-strokes.png")
+        include_bytes!("../test/images/input/pizza.png"),
+        include_bytes!("../test/images/mask/rectangle-strokes.png"),
+        include_bytes!("../test/images/expected/telea/pizza_rectangle-strokes.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/pizza.png"),
-        PathBuf::from("./test/images/mask/rectangle-half.png"),
-        PathBuf::from("./test/images/expected/telea/pizza_rectangle-half.png")
+        include_bytes!("../test/images/input/pizza.png"),
+        include_bytes!("../test/images/mask/rectangle-half.png"),
+        include_bytes!("../test/images/expected/telea/pizza_rectangle-half.png")
     )]
 
     /// Test inpaint of provided image with mask
-    fn test_inpaint_f32(#[case] image: PathBuf, #[case] mask: PathBuf, #[case] expected: PathBuf) {
-        let mut image = image::open(image).unwrap().to_rgba32f();
-        let mask = image::open(mask).unwrap().to_luma8();
+    fn test_inpaint_f32(#[case] image: &[u8], #[case] mask: &[u8], #[case] expected: &[u8]) {
+        let mut image = image::load_from_memory_with_format(image, image::ImageFormat::Png)
+            .unwrap()
+            .to_rgba32f();
+        let mask = image::load_from_memory_with_format(mask, image::ImageFormat::Png)
+            .unwrap()
+            .to_luma8();
 
-        let start = Instant::now();
+        #[cfg(feature = "std")]
+        let start = OffsetDateTime::now_utc();
         telea_inpaint(
             &mut image.as_ndarray_mut(),
             &mask.to_ndarray().slice(ndarray::s![.., .., 0]),
@@ -671,67 +692,76 @@ mod tests {
         )
         .unwrap();
 
-        println!("Duration of inpaint: {:?}", start.elapsed());
+        #[cfg(feature = "std")]
+        println!(
+            "Duration of inpaint: {} seconds",
+            (OffsetDateTime::now_utc() - start).as_seconds_f32()
+        );
 
         let result = DynamicImage::from(image.clone());
 
-        if !expected.exists() {
-            store_test_result(result.clone(), expected.clone());
-        }
-
-        let expected_image = DynamicImage::from(load_test_image(expected)).to_rgb8();
+        let expected_image = DynamicImage::from(
+            image::load_from_memory_with_format(expected, image::ImageFormat::Png).unwrap(),
+        )
+        .to_rgb8();
         let comparison_score =
             image_compare::rgb_hybrid_compare(&result.to_rgb8(), &expected_image)
                 .unwrap()
                 .score;
 
+        #[cfg(feature = "std")]
         println!("Test got score: {}", comparison_score);
         assert_eq!(comparison_score, 1.0);
     }
 
     #[rstest]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from("./test/images/expected/telea/bird_thin.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/thin.png"),
+        include_bytes!("../test/images/expected/telea/bird_thin.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from("./test/images/expected/telea/bird_medium.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/medium.png"),
+        include_bytes!("../test/images/expected/telea/bird_medium.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/large.png"),
-        PathBuf::from("./test/images/expected/telea/bird_large.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/large.png"),
+        include_bytes!("../test/images/expected/telea/bird_large.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/bird.png"),
-        PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from("./test/images/expected/telea/bird_text.png")
+        include_bytes!("../test/images/input/bird.png"),
+        include_bytes!("../test/images/mask/text.png"),
+        include_bytes!("../test/images/expected/telea/bird_text.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/thin.png"),
-        PathBuf::from("./test/images/expected/telea/toad_thin.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/thin.png"),
+        include_bytes!("../test/images/expected/telea/toad_thin.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/medium.png"),
-        PathBuf::from("./test/images/expected/telea/toad_medium.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/medium.png"),
+        include_bytes!("../test/images/expected/telea/toad_medium.png")
     )]
     #[case(
-        PathBuf::from("./test/images/input/toad.png"),
-        PathBuf::from("./test/images/mask/text.png"),
-        PathBuf::from("./test/images/expected/telea/toad_text.png")
+        include_bytes!("../test/images/input/toad.png"),
+        include_bytes!("../test/images/mask/text.png"),
+        include_bytes!("../test/images/expected/telea/toad_text.png")
     )]
 
     /// Test inpaint of provided image with mask
-    fn test_inpaint_u8(#[case] image: PathBuf, #[case] mask: PathBuf, #[case] expected: PathBuf) {
-        let mut image = image::open(image).unwrap().to_luma8();
-        let mask = image::open(mask).unwrap().to_luma8();
+    fn test_inpaint_u8(#[case] image: &[u8], #[case] mask: &[u8], #[case] expected: &[u8]) {
+        let mut image = image::load_from_memory_with_format(image, image::ImageFormat::Png)
+            .unwrap()
+            .to_luma8();
+        let mask = image::load_from_memory_with_format(mask, image::ImageFormat::Png)
+            .unwrap()
+            .to_luma8();
 
-        let start = Instant::now();
+        #[cfg(feature = "std")]
+        let start = OffsetDateTime::now_utc();
         telea_inpaint(
             &mut image.as_ndarray_mut(),
             &mask.to_ndarray().slice(ndarray::s![.., .., 0]),
@@ -739,20 +769,24 @@ mod tests {
         )
         .unwrap();
 
-        println!("Duration of inpaint: {:?}", start.elapsed());
+        #[cfg(feature = "std")]
+        println!(
+            "Duration of inpaint: {} seconds",
+            (OffsetDateTime::now_utc() - start).as_seconds_f32()
+        );
 
         let result = DynamicImage::from(image.clone());
 
-        if !expected.exists() {
-            store_test_result(result.clone(), expected.clone());
-        }
-
-        let expected_image = DynamicImage::from(load_test_image(expected)).to_rgb8();
+        let expected_image = DynamicImage::from(
+            image::load_from_memory_with_format(expected, image::ImageFormat::Png).unwrap(),
+        )
+        .to_rgb8();
         let comparison_score =
             image_compare::rgb_hybrid_compare(&result.to_rgb8(), &expected_image)
                 .unwrap()
                 .score;
 
+        #[cfg(feature = "std")]
         println!("Test got score: {}", comparison_score);
         assert!(comparison_score >= 0.99); // Slightly lower because of precision
     }
