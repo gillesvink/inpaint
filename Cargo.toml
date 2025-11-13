@@ -8,7 +8,7 @@ description = "Easy to use library for inpainting images."
 repository = "https://codeberg.org/gillesvink/inpaint"
 documentation = "https://docs.rs/inpaint"
 keywords = ["inpainting", "image-processing"]
-categories = ["multimedia", "graphics"]
+categories = ["multimedia", "graphics", "no-std"]
 
 [features]
 default = ["std"]
