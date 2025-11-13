@@ -1,6 +1,6 @@
 [package]
 name = "inpaint"
-version = "0.1.6"
+version = "0.1.7"
 edition = "2024"
 license = "EUPL-1.2"
 authors = ["Gilles Vink <gillesvink@noreply.codeberg.org>"]
@@ -8,7 +8,7 @@ description = "Easy to use library for inpainting images."
 repository = "https://codeberg.org/gillesvink/inpaint"
 documentation = "https://docs.rs/inpaint"
 keywords = ["inpainting", "image-processing"]
-categories = ["multimedia", "graphics"]
+categories = ["multimedia", "graphics", "no-std"]
 
 [features]
 default = ["std"]
