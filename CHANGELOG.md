@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.7](https://codeberg.org/gillesvink/inpaint/compare/v0.1.6...v0.1.7) - 2025-11-13
+
+### Other
+
+- Add feature flag for libm or std
+- Switch to core crate for most calls, add extra tests for rectangular inpainting and switch to libm
+
 ## [0.1.6](https://codeberg.org/gillesvink/inpaint/compare/v0.1.5...v0.1.6) - 2025-11-13
 
 ### Other
