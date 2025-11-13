@@ -168,57 +168,49 @@ fn pixel_gradient(
 ) -> Vec2 {
     let distance = distances[[coordinates.y, coordinates.x]];
 
-    Vec2::new(
-        calculate_gradient(
-            resolution.x,
-            distances,
-            flags,
-            distance,
-            coordinates.x,
-            coordinates.y,
-        ),
-        calculate_gradient(
-            resolution.y,
-            distances,
-            flags,
-            distance,
-            coordinates.y,
-            coordinates.x,
-        ),
-    )
-}
-
-/// Calculate gradient weighting
-fn calculate_gradient(
-    size: usize,
-    distances: &DistanceArray,
-    flags: &FlagArray,
-    value: f32,
-    a: usize,
-    b: usize,
-) -> f32 {
-    let next = a + 1;
-    if next >= size || a == 0 {
-        return MAX;
-    }
-
-    let previous = a - 1;
-
-    let gradient;
-    let flag_previous = flags[[previous, b]];
-    let flag_next = flags[[next, b]];
-
-    if flag_previous != Flag::Inside && flag_next != Flag::Inside {
-        gradient = (distances[[next, b]] - distances[[previous, b]]) / 2.0;
-    } else if flag_previous != Flag::Inside {
-        gradient = value - distances[[previous, b]];
-    } else if flag_next != Flag::Inside {
-        gradient = distances[[next, b]] - value;
+    let y;
+    let next_y = coordinates.y + 1;
+    if next_y >= resolution.y || coordinates.y == 0 {
+        y = MAX;
     } else {
-        gradient = 0.0;
+        let previous_y = coordinates.y - 1;
+
+        let flag_previous = flags[[previous_y, coordinates.x]];
+        let flag_next = flags[[next_y, coordinates.x]];
+
+        if flag_previous != Flag::Inside && flag_next != Flag::Inside {
+            y = (distances[[next_y, coordinates.x]] - distances[[previous_y, coordinates.x]]) / 2.0;
+        } else if flag_previous != Flag::Inside {
+            y = distance - distances[[previous_y, coordinates.x]];
+        } else if flag_next != Flag::Inside {
+            y = distances[[next_y, coordinates.x]] - distance;
+        } else {
+            y = 0.0;
+        }
     }
 
-    gradient
+    let x;
+    let next_x = coordinates.x + 1;
+    if next_x >= resolution.x || coordinates.x == 0 {
+        x = MAX;
+    } else {
+        let previous_x = coordinates.x - 1;
+
+        let flag_previous = flags[[coordinates.y, previous_x]];
+        let flag_next = flags[[coordinates.y, next_x]];
+
+        if flag_previous != Flag::Inside && flag_next != Flag::Inside {
+            x = (distances[[coordinates.y, next_x]] - distances[[coordinates.y, previous_x]]) / 2.0;
+        } else if flag_previous != Flag::Inside {
+            x = distance - distances[[coordinates.y, previous_x]];
+        } else if flag_next != Flag::Inside {
+            x = distances[[coordinates.y, next_x]] - distance;
+        } else {
+            x = 0.0;
+        }
+    }
+
+    Vec2::new(x, y)
 }
 
 /// Normalize value to 0-1 range in float
@@ -638,6 +630,11 @@ mod tests {
         PathBuf::from("./test/images/input/toad.png"),
         PathBuf::from("./test/images/mask/medium.png"),
         PathBuf::from(format!("./test/images/expected/{}/toad_medium.png", "telea"))
+    )]
+    #[case(
+        PathBuf::from("./test/images/input/toad.png"),
+        PathBuf::from("./test/images/mask/large.png"),
+        PathBuf::from(format!("./test/images/expected/{}/toad_large.png", "telea"))
     )]
     #[case(
         PathBuf::from("./test/images/input/toad.png"),
